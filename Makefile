@@ -5,4 +5,4 @@ lib: sources
 sources:
 	g++ -std=c++0x -fPIC -c allocation_hooks.cpp -o allocation_hooks.o
 clean:
-	rm *.o *.so
+	rm *.o *.so run
