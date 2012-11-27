@@ -1,5 +1,5 @@
-all: sources
-	g++ main.cpp -std=c++0x -o run
+all: sources lib
+	g++ main.cpp -std=c++0x -o run -L. -lleak_check
 lib: sources
 	g++ -shared -Wl,-soname,libleak_check.so -o libleak_check.so allocation_hooks.o
 sources:

@@ -44,6 +44,3 @@ void check_map() {
 	      << iter->second.file << " " << iter->second.line << std::endl;
   }
 }
-
-
-#define new new(__FILE__, __LINE__)
