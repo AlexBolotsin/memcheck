@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <iostream>
+#include <cstring>
 #include <map>
 
 struct PtrInfo{
@@ -35,6 +36,25 @@ void operator delete[](void* ptr) {
   free(ptr);
 }
 
+void* malloc(size_t size, const char* file, int line) {
+  void* ptr = malloc(size);
+  ptr_map[ptr] = {file, line};
+}
+void* calloc(size_t num, size_t size, const char* file, int line) {
+  void* ptr = malloc(num*size);
+  ptr_map[ptr] = {file, line};
+}
+void* realloc(void* source, size_t size, const char* file, int line) {
+  void* ptr = malloc(size);
+  memcpy(ptr, source, size);
+  ptr_map[ptr] = {file, line};
+  return ptr;
+}
+void free(void* ptr, const char* file, int line) {
+  ptr_map.erase(ptr);
+  free(ptr);
+}
+
 
 void check_map() {
   if(ptr_map.empty()) return;
@@ -42,5 +62,6 @@ void check_map() {
   for ( ; iter != ptr_map.end(); ++iter) {
     std::cout << "MEMORY LEAK! " << std::hex << iter->first << std::dec << " "
 	      << iter->second.file << " " << iter->second.line << std::endl;
+    free(iter->first);
   }
 }
