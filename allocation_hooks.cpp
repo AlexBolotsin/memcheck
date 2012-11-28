@@ -44,7 +44,7 @@ void* operator new(size_t size, const char* file, int line) {
 void* operator new[](size_t size, const char* file, int line) {
   void* ptr = malloc(size);
   add_ptr(ptr, {file, line, size, __FUNCTION__});
-  ptr;
+  return ptr;
 }
 
 void operator delete(void* ptr) {
