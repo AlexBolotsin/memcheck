@@ -105,8 +105,11 @@ void* realloc(void* source, size_t size, const char* file, int line) {
   void* ptr = realloc(source, size);
   if (source)
     GetInfoStorage().erase_ptr(source);
-  if (ptr)
+  if (ptr) {
     GetInfoStorage().add_ptr(ptr, {file, line, size, __FUNCTION__});
+  } else {
+    ptr = source;
+  }
   return ptr;
 }
 
