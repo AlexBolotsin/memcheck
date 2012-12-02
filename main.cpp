@@ -8,5 +8,4 @@ int main(int argc, char** argv) {
   chunk = calloc(1, sizeof(int));
   chunk = calloc(1, sizeof(int));
   chunk = realloc(chunk, 2*sizeof(num));
-  check_map();
 }

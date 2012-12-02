@@ -11,86 +11,106 @@ struct PtrInfo{
   const char* func_name;
 };
 
-std::list<const char*> error_list;
-std::map<void*, PtrInfo> ptr_map;
+class InfoStorage {
+  std::list<const char*> error_list;
+  std::map<void*, PtrInfo> ptr_map;
 
-void add_ptr(void* ptr, const PtrInfo& info) {
-  ptr_map[ptr] = info;
-}
-
-void error(const char* msg) {
-  error_list.push_back(msg);
-  std::cout << msg << std::endl;
-}
-
-void erase_ptr(void* ptr) {
-  auto iter = ptr_map.find(ptr);
-  if (iter == ptr_map.end())
-    std::cout << "Try to erase unregistered pointer " << std::hex << ptr << std::dec << "!" << std::endl;
-  ptr_map.erase(ptr);
-}
-
-void check_map() {
-  if(ptr_map.empty()) return;
-  std::cout << "Memory leak summary:" << std::endl;
-  std::map<void*, PtrInfo>::const_iterator iter = ptr_map.begin();
-  unsigned int leaked_bytes = 0;
-  for ( ; iter != ptr_map.end(); ++iter) {
-    std::cout << "\t" << iter->second.func_name << " (" << std::hex
-	      << iter->first << std::dec << ") missed " << iter->second.size
-	      << " bytes in " << iter->second.file << ":" << iter->second.line <<  std::endl;
-    leaked_bytes += iter->second.size;
-    free(iter->first);
+  void check_map() const {
+    if(ptr_map.empty()) return;
+    std::cout << "Memory leak summary:" << std::endl;
+    std::map<void*, PtrInfo>::const_iterator iter = ptr_map.begin();
+    unsigned int leaked_bytes = 0;
+    for ( ; iter != ptr_map.end(); ++iter) {
+      std::cout << "\t" << iter->second.func_name << " (" << std::hex
+		<< iter->first << std::dec << ") missed " << iter->second.size
+		<< " bytes in " << iter->second.file << ":" << iter->second.line <<  std::endl;
+      leaked_bytes += iter->second.size;
+      free(iter->first);
+    }
+    std::cout << "Total leaked " << leaked_bytes << " bytes" << std::endl;
   }
-  std::cout << "Total leaked " << leaked_bytes << " bytes" << std::endl;
+
+  InfoStorage() {}
+  InfoStorage(const InfoStorage& rhs);
+  InfoStorage& operator=(const InfoStorage& rhs);
+public:
+
+  static InfoStorage& GetInstance() {
+    static InfoStorage storage;
+    return storage;
+  }
+
+  ~InfoStorage() {
+    check_map();
+  }
+
+  void add_ptr(void* ptr, const PtrInfo& info) {
+    ptr_map[ptr] = info;
+  }
+
+  void error(const char* msg) {
+    error_list.push_back(msg);
+    std::cout << msg << std::endl;
+  }
+
+  void erase_ptr(void* ptr) {
+    auto iter = ptr_map.find(ptr);
+    if (iter == ptr_map.end())
+      std::cout << "Try to erase unregistered pointer " << std::hex << ptr << std::dec << "!" << std::endl;
+    ptr_map.erase(ptr);
+  }
+};
+
+InfoStorage& GetInfoStorage() {
+  return InfoStorage::GetInstance();
 }
 
 void* operator new(size_t size, const char* file, int line) throw (std::bad_alloc) {
   void* ptr = malloc(size);
   if (!ptr) throw std::bad_alloc();
-  add_ptr(ptr, {file, line, size, __FUNCTION__});
+  GetInfoStorage().add_ptr(ptr, {file, line, size, __FUNCTION__});
   return ptr;
 }
 
 void* operator new[](size_t size, const char* file, int line) throw (std::bad_alloc) {
   void* ptr = malloc(size);
   if (!ptr) throw std::bad_alloc();
-  add_ptr(ptr, {file, line, size, __FUNCTION__});
+  GetInfoStorage().add_ptr(ptr, {file, line, size, __FUNCTION__});
   return ptr;
 }
 
 void operator delete(void* ptr) {
-  erase_ptr(ptr);
+  GetInfoStorage().erase_ptr(ptr);
   free(ptr);
 }
 
 void operator delete[](void* ptr) {
-  erase_ptr(ptr);
+  GetInfoStorage().erase_ptr(ptr);
   free(ptr);
 }
 
 void* malloc(size_t size, const char* file, int line) {
   void* ptr = malloc(size);
-  add_ptr(ptr, {file, line, size, __FUNCTION__});
+  GetInfoStorage().add_ptr(ptr, {file, line, size, __FUNCTION__});
   return ptr;
 }
 
 void* calloc(size_t num, size_t size, const char* file, int line) {
   void* ptr = calloc(num, size);  
-  add_ptr(ptr, {file, line, size, __FUNCTION__});
+  GetInfoStorage().add_ptr(ptr, {file, line, size, __FUNCTION__});
   return ptr;
 }
 
 void* realloc(void* source, size_t size, const char* file, int line) {
   void* ptr = realloc(source, size);
   if (source)
-    erase_ptr(source);
+    GetInfoStorage().erase_ptr(source);
   if (ptr)
-    add_ptr(ptr, {file, line, size, __FUNCTION__});
+    GetInfoStorage().add_ptr(ptr, {file, line, size, __FUNCTION__});
   return ptr;
 }
 
 void free(void* ptr, const char* file, int line) {
-  erase_ptr(ptr);
+  GetInfoStorage().erase_ptr(ptr);
   free(ptr);
 }
