@@ -2,6 +2,7 @@
 #include <iostream>
 #include <cstring>
 #include <map>
+#include <list>
 
 struct PtrInfo{
   const char* file;
@@ -10,13 +11,22 @@ struct PtrInfo{
   const char* func_name;
 };
 
+std::list<const char*> error_list;
 std::map<void*, PtrInfo> ptr_map;
 
 void add_ptr(void* ptr, const PtrInfo& info) {
-  ptr_map[ptr] = info;  
+  ptr_map[ptr] = info;
+}
+
+void error(const char* msg) {
+  error_list.push_back(msg);
+  std::cout << msg << std::endl;
 }
 
 void erase_ptr(void* ptr) {
+  auto iter = ptr_map.find(ptr);
+  if (iter == ptr_map.end())
+    std::cout << "Try to erase unregistered pointer " << std::hex << ptr << std::dec << "!" << std::endl;
   ptr_map.erase(ptr);
 }
 
@@ -35,14 +45,16 @@ void check_map() {
   std::cout << "Total leaked " << leaked_bytes << " bytes" << std::endl;
 }
 
-void* operator new(size_t size, const char* file, int line) {
+void* operator new(size_t size, const char* file, int line) throw (std::bad_alloc) {
   void* ptr = malloc(size);
+  if (!ptr) throw std::bad_alloc();
   add_ptr(ptr, {file, line, size, __FUNCTION__});
   return ptr;
 }
 
-void* operator new[](size_t size, const char* file, int line) {
+void* operator new[](size_t size, const char* file, int line) throw (std::bad_alloc) {
   void* ptr = malloc(size);
+  if (!ptr) throw std::bad_alloc();
   add_ptr(ptr, {file, line, size, __FUNCTION__});
   return ptr;
 }
@@ -59,7 +71,7 @@ void operator delete[](void* ptr) {
 
 void* malloc(size_t size, const char* file, int line) {
   void* ptr = malloc(size);
-  ptr_map[ptr] = {file, line, size, __FUNCTION__};
+  add_ptr(ptr, {file, line, size, __FUNCTION__});
   return ptr;
 }
 
@@ -71,8 +83,10 @@ void* calloc(size_t num, size_t size, const char* file, int line) {
 
 void* realloc(void* source, size_t size, const char* file, int line) {
   void* ptr = realloc(source, size);
-  erase_ptr(source);
-  add_ptr(ptr, {file, line, size, __FUNCTION__});
+  if (source)
+    erase_ptr(source);
+  if (ptr)
+    add_ptr(ptr, {file, line, size, __FUNCTION__});
   return ptr;
 }
 
