@@ -3,6 +3,9 @@
 
 #include "info_storage.h"
 
+/*! Define function which does exist in memcheck lib
+  @return Reference to InfoStorage
+ */
 InfoStorage& GetInfoStorage();
 
 void* operator new(size_t size, const char* file, int line) throw (std::bad_alloc) {
@@ -41,6 +44,12 @@ void* calloc(size_t num, size_t size, const char* file, int line) {
   return ptr;
 }
 
+/*! It has pretty tricky logic.
+  @param[in] source regularly it gets pointer to existing memory. If equals 0 so realloc works as malloc.
+  @param[in] size regularly it gets size of new memory. If equals 0 so realloc works as free.
+  /TODO Fix it and test in cppunit
+  @return Pointer to new memory. Null if it fails of size equals 0.
+ */
 void* realloc(void* source, size_t size, const char* file, int line) {
   void* ptr = realloc(source, size);
   if (source)

@@ -1,5 +1,9 @@
 #include <iostream>
+#ifdef MEMCHECK
 #include "allocation_hooks.h"
+#else
+#include <cstdlib>
+#endif
 
 int main(int argc, char** argv) {
   int* num = new int;
